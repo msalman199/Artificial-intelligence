@@ -1,0 +1,137 @@
+Lab 5: Risk Assessment with AI and OpenFAIR
+Objective
+In this lab, you will learn the OpenFAIR risk assessment methodology and apply AI to predict potential risk scenarios based on historical data.
+
+Prerequisites
+Start your Al Nafi-provided Ubuntu machine
+
+Install required libraries:
+
+pip install pandas scikit-learn numpy matplotlib
+Step 1: Understanding OpenFAIR Principles
+OpenFAIR (Open Factor Analysis of Information Risk) is a methodology for assessing and quantifying the risk associated with security threats. It focuses on the following key components:
+
+Asset Value: The worth of the asset at risk.
+
+Threat Event Frequency: How often a specific threat is likely to occur.
+
+Vulnerability: The likelihood of a successful attack.
+
+Impact: The potential consequences of the threat event.
+
+Using OpenFAIR, we can calculate risk using the following formula:
+
+Risk = Asset Value * Threat Event Frequency * Vulnerability * Impact
+Step 2: Data Collection for AI-based Risk Assessment
+Simulate historical data for risk factors:
+import pandas as pd
+import numpy as np
+
+# Simulate risk data: Asset value, threat event frequency, vulnerability, and impact
+np.random.seed(42)
+
+data = {
+    "asset_value": np.random.uniform(1000, 5000, 100),  # Value in dollars
+    "threat_event_frequency": np.random.uniform(0.1, 1.0, 100),  # Frequency (per year)
+    "vulnerability": np.random.uniform(0.1, 1.0, 100),  # Probability of a successful attack
+    "impact": np.random.uniform(100, 1000, 100),  # Impact value (in dollars)
+    "historical_loss": np.random.uniform(500, 3000, 100)  # Historical loss as an outcome
+}
+
+df = pd.DataFrame(data)
+print(df.head())
+This data represents historical information about assets, threats, vulnerabilities, and impacts in a simulated environment.
+
+Save the dataset as risk_data.csv:
+df.to_csv("risk_data.csv", index=False)
+Step 3: Develop an AI Model to Predict Risk Scenarios
+We will now develop an AI model to predict the historical loss based on the OpenFAIR factors (asset value, threat frequency, vulnerability, and impact).
+
+Create a Python script train_risk_model.py:
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error
+import matplotlib.pyplot as plt
+
+# Load the dataset
+df = pd.read_csv("risk_data.csv")
+
+# Feature selection: asset_value, threat_event_frequency, vulnerability, and impact
+X = df[["asset_value", "threat_event_frequency", "vulnerability", "impact"]]
+y = df["historical_loss"]
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Train a Random Forest model
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Predict on the test set
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+print(f"Mean Squared Error: {mse}")
+
+# Visualize the predictions
+plt.scatter(y_test, y_pred)
+plt.xlabel("True Values")
+plt.ylabel("Predictions")
+plt.title("Risk Prediction vs Actual Loss")
+plt.show()
+Run the model:
+python3 train_risk_model.py
+This script uses a Random Forest Regressor to predict the historical loss based on the risk factors, evaluating the model with Mean Squared Error and plotting the actual vs predicted loss.
+
+Step 4: Predict Future Risk Scenarios
+Create a prediction script for new risk scenarios:
+# Predict future risk scenario
+new_data = pd.DataFrame({
+    "asset_value": [3000],
+    "threat_event_frequency": [0.8],
+    "vulnerability": [0.7],
+    "impact": [500]
+})
+
+# Predict the loss for the new scenario
+future_loss = model.predict(new_data)
+print(f"Predicted risk (loss) for the new scenario: ${future_loss[0]:.2f}")
+Run the prediction script:
+python3 predict_risk.py
+This script takes new input data and predicts the future loss using the trained model.
+
+Step 5: Visualize the Predicted Risk Scenarios
+Extend the previous script to visualize risk predictions for multiple scenarios:
+import matplotlib.pyplot as plt
+
+# Generate some new scenarios
+new_scenarios = pd.DataFrame({
+    "asset_value": np.random.uniform(1000, 5000, 50),
+    "threat_event_frequency": np.random.uniform(0.1, 1.0, 50),
+    "vulnerability": np.random.uniform(0.1, 1.0, 50),
+    "impact": np.random.uniform(100, 1000, 50)
+})
+
+# Predict loss for all new scenarios
+predicted_losses = model.predict(new_scenarios)
+
+# Plot the results
+plt.hist(predicted_losses, bins=10, color='skyblue', edgecolor='black')
+plt.xlabel("Predicted Loss ($)")
+plt.ylabel("Frequency")
+plt.title("Distribution of Predicted Risk Losses")
+plt.show()
+Run the visualization script:
+python3 visualize_risk.py
+Conclusion
+In this lab, you:
+
+Learned about the OpenFAIR risk assessment methodology and applied it in a simulated environment
+
+Developed a machine learning model using Random Forest to predict system risk scenarios based on historical data
+
+Created visual representations of risk predictions, helping you anticipate potential risks in future system operations
+
+This lab demonstrates how AI can enhance risk management and support data-driven decision-making for cybersecurity and compliance, using OpenFAIR principles and machine learning techniques.
