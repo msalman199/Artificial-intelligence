@@ -1,0 +1,9 @@
+artifact_location: file:///home/ubuntu/mlflow-ci-logs/mlruns/159930709199357815
+creation_time: 1794695404368
+effective_trace_archival_retention: null
+experiment_id: '159930709199357815'
+last_update_time: 1794695404368
+lifecycle_stage: active
+name: CI_CD_Optimization
+trace_location: null
+workspace: default

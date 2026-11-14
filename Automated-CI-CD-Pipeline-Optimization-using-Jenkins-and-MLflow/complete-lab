@@ -1,0 +1,90 @@
+
+Lab 2: Automated CI/CD Pipeline Optimization using Jenkins and MLflow
+Objective
+Set up a local CI/CD pipeline using Jenkins and use MLflow to log, analyze, and optimize build and deployment times using historical run data.
+
+Prerequisites
+Start your Al Nafi-provided Ubuntu machine
+Install Jenkins:
+sudo apt update
+sudo apt install openjdk-11-jdk jenkins -y
+sudo systemctl start jenkins
+sudo systemctl enable jenkins
+Install MLflow and required Python packages:
+pip install mlflow pandas matplotlib
+Access Jenkins via browser:
+http://localhost:8080
+
+Initial admin password:
+
+sudo cat /var/lib/jenkins/secrets/initialAdminPassword
+Steps
+Step 1: Create a Jenkins CI/CD Job
+Create a Freestyle project called MLflow_CI_CD_Job.
+
+In Build Steps, add the following shell script:
+
+#!/bin/bash
+
+START=$(date +%s)
+
+# Simulate build and deployment
+echo "Running build simulation..."
+sleep $((RANDOM % 5 + 2))  # simulate build time (2–6 sec)
+
+echo "Running deployment simulation..."
+sleep $((RANDOM % 4 + 2))  # simulate deploy time (2–5 sec)
+
+END=$(date +%s)
+DURATION=$((END - START))
+
+# Log data to CSV
+mkdir -p ~/mlflow-ci-logs
+echo "$(date),$DURATION" >> ~/mlflow-ci-logs/build_times.csv
+echo "Build+Deploy Time: $DURATION seconds"
+Save and Build the project multiple times to generate a history of runtimes.
+Step 2: Track Performance with MLflow
+Create a Python script log_to_mlflow.py in ~/mlflow-ci-logs/:
+import pandas as pd
+import mlflow
+import os
+
+mlflow.set_tracking_uri("file://" + os.path.abspath("mlruns"))
+mlflow.set_experiment("CI_CD_Optimization")
+
+df = pd.read_csv("build_times.csv", names=["timestamp", "duration"])
+
+with mlflow.start_run():
+    avg_time = df["duration"].mean()
+    latest_time = df["duration"].iloc[-1]
+
+    mlflow.log_metric("latest_build_time", latest_time)
+    mlflow.log_metric("average_build_time", avg_time)
+    print(f"Logged to MLflow: latest={latest_time}, average={avg_time}")
+Run this script after several Jenkins builds:
+cd ~/mlflow-ci-logs
+python3 log_to_mlflow.py
+Step 3: Launch MLflow UI
+mlflow ui --port 5000
+Access MLflow tracking UI at:
+http://localhost:5000
+
+You can now view historical build durations, trends, and optimization metrics.
+
+Optional: Add MLflow to Jenkins Job
+Append the following to your Jenkins job shell step:
+python3 ~/mlflow-ci-logs/log_to_mlflow.py
+This allows every Jenkins run to automatically log metrics to MLflow.
+
+Conclusion
+In this lab, you:
+
+Created a local CI/CD pipeline using Jenkins
+
+Logged and tracked build/deploy durations across multiple runs
+
+Integrated MLflow to monitor and visualize performance trends
+
+Enabled data-driven decisions to optimize pipeline efficiency — all offline
+
+This lab introduces machine learning observability into CI/CD and demonstrates how performance telemetry can help automate DevOps optimization.
