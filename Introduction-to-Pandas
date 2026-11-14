@@ -1,0 +1,162 @@
+Lab 5: Introduction to Pandas
+Objectives
+Understand the basic operations in Pandas
+Learn how to load data into a DataFrame
+Analyze data using built-in functions
+Perform data cleaning techniques
+Prerequisites
+Basic understanding of Python programming
+An Ubuntu 24.04 lab VM with sudo and internet access
+Python 3.12 and Pandas (you will install them in a virtual environment in this lab; no Jupyter or IDE is needed, only the terminal)
+Lab Tasks
+Important: Do not blindly copy-paste commands or run scripts. Read each command, understand what it does, then apply it yourself and complete the lab properly in the lab terminal.
+
+Task 1: Load a CSV file into a DataFrame
+Ubuntu 24.04 protects the system Python (PEP 668), so pip install outside a virtual environment fails. Install Python tooling and create a venv first. The packages are pinned so everyone gets the same behaviour; matplotlib and scikit-learn are not used in this lab but are installed because later labs in the series rely on them.
+
+sudo apt update
+sudo apt install -y python3 python3-venv python3-pip
+python3 -m venv ~/mlenv
+source ~/mlenv/bin/activate
+pip install numpy==2.1.3 pandas==2.2.3 matplotlib==3.9.2 scikit-learn==1.5.2
+Expected output (last line):
+
+Successfully installed ... numpy-2.1.3 ... pandas-2.2.3 ... scikit-learn-1.5.2
+Troubleshooting challenge: If this command fails (for example a package or version cannot be found or built), resolving it is part of your task. Read the error message, then check python3 --version, apt-cache policy python3-venv, which pip (it should point to ~/mlenv), pip debug, and the official page https://pandas.pydata.org/docs/getting_started/install.html, and search the exact error text before continuing.
+
+Verify the installation (the venv must be active, so your prompt starts with (mlenv)):
+
+python3 -c "import pandas; print(pandas.__version__)"
+Expected output:
+
+2.2.3
+Step 1.1: Import Pandas Library
+Create a working directory and the data file. The lab has no data on a fresh VM, so we generate data.csv with 20 rows, leaving some age and salary values blank.
+
+mkdir -p ~/pandas-lab && cd ~/pandas-lab
+cat > data.csv <<'EOF'
+name,age,salary,department
+Alice,29,52000,Sales
+Bob,35,61000,IT
+Carol,,58000,HR
+Dave,42,75000,IT
+Eve,31,,Sales
+Frank,28,48000,HR
+Grace,39,82000,IT
+Heidi,,67000,Sales
+Ivan,45,91000,IT
+Judy,33,55000,HR
+Ken,27,,Sales
+Laura,36,70000,IT
+Mallory,41,63000,HR
+Niaj,30,50000,Sales
+Olivia,,72000,IT
+Peggy,38,66000,HR
+Quinn,26,47000,Sales
+Rupert,44,88000,IT
+Sybil,32,,HR
+Trent,37,69000,Sales
+EOF
+head -5 data.csv
+Expected output:
+
+name,age,salary,department
+Alice,29,52000,Sales
+Bob,35,61000,IT
+Carol,,58000,HR
+Dave,42,75000,IT
+Now start the script with the import:
+
+cat > pandas_lab.py <<'EOF'
+import pandas as pd
+EOF
+Step 1.2: Load the CSV File
+Load the CSV into a DataFrame with read_csv() and print its shape (rows, columns).
+
+cat >> pandas_lab.py <<'EOF'
+
+df = pd.read_csv('data.csv')
+print("Shape before dropna:", df.shape)
+EOF
+python3 pandas_lab.py
+Expected output:
+
+Shape before dropna: (20, 4)
+Task 2: View the first few rows and basic statistics
+The script grows with each step and is re-run each time, so the output is cumulative: earlier lines repeat before the new ones.
+
+Step 2.1: Display the First Few Rows
+head() shows the first five rows, which helps confirm the data loaded correctly.
+
+cat >> pandas_lab.py <<'EOF'
+
+print(df.head())
+EOF
+python3 pandas_lab.py
+Expected output (after the shape line; column spacing may differ slightly):
+
+    name   age   salary department
+0  Alice  29.0  52000.0      Sales
+1    Bob  35.0  61000.0         IT
+2  Carol   NaN  58000.0         HR
+3   Dave  42.0  75000.0         IT
+4    Eve  31.0      NaN      Sales
+Step 2.2: Basic Statistics
+describe() gives count, mean, standard deviation, minimum and maximum for numeric columns. Note that count is lower than 20 because of the blanks.
+
+cat >> pandas_lab.py <<'EOF'
+
+print(df.describe())
+EOF
+python3 pandas_lab.py | tail -9
+Expected output: a table with rows count mean std min 25% 50% 75% max and columns age and salary, where the count of both is 17.
+
+Task 3: Clean data by removing missing values
+Step 3.1: Identify Missing Values
+Use isnull() with sum() to count missing values per column.
+
+cat >> pandas_lab.py <<'EOF'
+
+print("Missing values before cleaning:")
+print(df.isnull().sum())
+EOF
+python3 pandas_lab.py | tail -6
+Expected output:
+
+Missing values before cleaning:
+name          0
+age           3
+salary        3
+department    0
+dtype: int64
+Step 3.2: Remove Missing Values
+dropna() removes rows that contain missing values. Make sure this fits your data goals, because it discards data.
+
+cat >> pandas_lab.py <<'EOF'
+
+df_cleaned = df.dropna()
+print("Shape after dropna:", df_cleaned.shape)
+EOF
+python3 pandas_lab.py | tail -1
+Expected output:
+
+Shape after dropna: (14, 4)
+Step 3.3: Verify Data Cleanliness
+Check again that no missing values remain.
+
+cat >> pandas_lab.py <<'EOF'
+
+print("Missing values after cleaning:")
+print(df_cleaned.isnull().sum())
+EOF
+python3 pandas_lab.py | tail -6
+Expected output:
+
+Missing values after cleaning:
+name          0
+age           0
+salary        0
+department    0
+dtype: int64
+Conclusion
+In this lab, you have learned the basics of working with Pandas. You loaded data from a CSV file, examined and interpreted the dataset using basic methods, and cleaned the data by removing missing values. This foundational knowledge is essential for exploring deeper functionalities of Pandas in data manipulation and analysis.
