@@ -1,0 +1,121 @@
+Lab 3: Monitoring & Alerting with Prometheus, Grafana, and AI
+Objective
+Set up Prometheus and Grafana to monitor system metrics, collect time-series data, and apply AI models to forecast future resource usage or detect early warning signs of system issues.
+
+Prerequisites
+Start your Al Nafi-provided Ubuntu machine
+Install Prometheus:
+sudo useradd --no-create-home --shell /bin/false prometheus
+sudo mkdir /etc/prometheus /var/lib/prometheus
+
+cd /tmp
+wget https://github.com/prometheus/prometheus/releases/download/v2.52.0/prometheus-2.52.0.linux-amd64.tar.gz
+tar xvf prometheus-2.52.0.linux-amd64.tar.gz
+cd prometheus-2.52.0.linux-amd64
+
+sudo cp prometheus /usr/local/bin/
+sudo cp promtool /usr/local/bin/
+sudo cp -r consoles/ console_libraries/ /etc/prometheus/
+sudo cp prometheus.yml /etc/prometheus/
+Create a systemd service (optional) or run manually:
+
+prometheus --config.file=/etc/prometheus/prometheus.yml
+Access Prometheus at: http://localhost:9090
+
+Install Node Exporter (for system metrics):
+cd /tmp
+wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+tar xvf node_exporter-1.7.0.linux-amd64.tar.gz
+cd node_exporter-1.7.0.linux-amd64
+./node_exporter
+Prometheus config (/etc/prometheus/prometheus.yml) should include:
+
+scrape_configs:
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+Install Grafana:
+sudo apt install -y software-properties-common
+sudo add-apt-repository "deb https://packages.grafana.com/oss/deb stable main"
+wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+sudo apt update
+sudo apt install grafana -y
+sudo systemctl start grafana-server
+sudo systemctl enable grafana-server
+Access Grafana at: http://localhost:3000
+Login: admin / admin
+
+Steps
+Step 1: Monitor System Metrics
+In Grafana, add Prometheus as a data source (http://localhost:9090).
+
+Create a dashboard and plot:
+
+CPU usage (rate(node_cpu_seconds_total{mode!="idle"}[1m]))
+
+Memory usage (node_memory_Active_bytes / node_memory_MemTotal_bytes)
+
+Step 2: Collect Metrics for AI Analysis
+Prometheus query API:
+
+curl 'http://localhost:9090/api/v1/query_range?query=node_memory_MemFree_bytes&start=<START>&end=<END>&step=15'
+Save data to CSV via Python:
+
+import requests
+import pandas as pd
+import time
+
+end = int(time.time())
+start = end - 3600  # last 1 hour
+
+url = f"http://localhost:9090/api/v1/query_range?query=node_memory_MemFree_bytes&start={start}&end={end}&step=15"
+resp = requests.get(url).json()
+
+values = resp['data']['result'][0]['values']
+df = pd.DataFrame(values, columns=["timestamp", "mem_free"])
+df["timestamp"] = pd.to_datetime(df["timestamp"], unit='s')
+df["mem_free"] = df["mem_free"].astype(float)
+df.to_csv("mem_free_data.csv", index=False)
+Step 3: Predict Future Usage Using AI
+Install ML tools:
+
+pip install pandas scikit-learn matplotlib
+Create prediction script:
+
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+import matplotlib.pyplot as plt
+import numpy as np
+
+df = pd.read_csv("mem_free_data.csv")
+df["time_idx"] = range(len(df))
+
+X = df[["time_idx"]]
+y = df["mem_free"]
+
+model = LinearRegression()
+model.fit(X, y)
+
+future = pd.DataFrame({"time_idx": range(len(df), len(df)+20)})
+future["mem_free_pred"] = model.predict(future)
+
+plt.plot(df["time_idx"], y, label="Actual")
+plt.plot(future["time_idx"], future["mem_free_pred"], label="Predicted", linestyle="--")
+plt.xlabel("Time Index")
+plt.ylabel("Memory Free (bytes)")
+plt.title("Memory Forecast")
+plt.legend()
+plt.savefig("memory_forecast.png")
+plt.show()
+Conclusion
+In this lab, you:
+
+Set up Prometheus and Grafana for real-time system monitoring
+
+Collected time-series data from Prometheus using its HTTP API
+
+Used machine learning (linear regression) to forecast future resource usage
+
+Visualized the predictions to anticipate downtimes or performance issues
+
+This lab gives you full visibility into system health and enables proactive monitoring using AI — all on your offline Ubuntu environment.
