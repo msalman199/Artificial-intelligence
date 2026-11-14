@@ -1,0 +1,114 @@
+Lab 4: NLP-driven Automated Compliance Reporting with ELK Stack
+Objective
+Set up the ELK Stack for log ingestion and visualization, and apply Natural Language Processing (NLP) to extract, categorize, and summarize compliance-relevant data from the logs.
+
+Prerequisites
+Start your Al Nafi-provided Ubuntu machine
+Install dependencies:
+sudo apt update
+sudo apt install openjdk-11-jdk wget apt-transport-https -y
+Install ELK Stack (Offline-friendly Setup)
+Elasticsearch:
+wget https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-7.17.17-amd64.deb
+sudo dpkg -i elasticsearch-7.17.17-amd64.deb
+sudo systemctl enable elasticsearch
+sudo systemctl start elasticsearch
+Logstash:
+wget https://artifacts.elastic.co/downloads/logstash/logstash-7.17.17-amd64.deb
+sudo dpkg -i logstash-7.17.17-amd64.deb
+Kibana:
+wget https://artifacts.elastic.co/downloads/kibana/kibana-7.17.17-amd64.deb
+sudo dpkg -i kibana-7.17.17-amd64.deb
+sudo systemctl enable kibana
+sudo systemctl start kibana
+Access Kibana at: http://localhost:5601
+Steps
+Step 1: Set Up Log Ingestion with Logstash
+Create a sample log file:
+mkdir -p ~/elk-nlp-lab/logs
+echo "[2025-07-09] ERROR: User login failed due to invalid credentials." >> ~/elk-nlp-lab/logs/system.log
+echo "[2025-07-09] WARNING: Unusual login location detected." >> ~/elk-nlp-lab/logs/system.log
+Create a Logstash config:
+nano ~/elk-nlp-lab/logstash.conf
+input {
+  file {
+    path => "/home/<your-username>/elk-nlp-lab/logs/system.log"
+    start_position => "beginning"
+    sincedb_path => "/dev/null"
+  }
+}
+filter {
+  grok {
+    match => { "message" => "\[%{TIMESTAMP_ISO8601:timestamp}\] %{LOGLEVEL:level}: %{GREEDYDATA:msg}" }
+  }
+}
+output {
+  elasticsearch {
+    hosts => ["http://localhost:9200"]
+    index => "compliance-logs"
+  }
+  stdout { codec => rubydebug }
+}
+Replace <your-username> with your actual Ubuntu user.
+
+Run Logstash:
+sudo /usr/share/logstash/bin/logstash -f ~/elk-nlp-lab/logstash.conf
+Step 2: Visualize Logs in Kibana
+Go to Kibana → Management → Stack Management → Index Patterns
+
+Create index pattern: compliance-logs*
+
+Use Discover tab to explore logs
+
+Add visualizations (e.g., pie chart of log levels)
+
+Step 3: NLP Analysis of Logs
+Install NLP packages:
+pip install pandas nltk scikit-learn
+Create nlp_compliance.py:
+import pandas as pd
+import re
+from sklearn.feature_extraction.text import CountVectorizer
+from nltk.sentiment import SentimentIntensityAnalyzer
+import nltk
+nltk.download('vader_lexicon')
+
+# Sample log file
+with open("logs/system.log", "r") as f:
+    logs = f.readlines()
+
+# Clean and structure logs
+data = []
+for line in logs:
+    timestamp = re.search(r"\[(.*?)\]", line).group(1)
+    level = re.search(r"\] (\w+):", line).group(1)
+    message = re.search(r": (.*)", line).group(1)
+    data.append((timestamp, level, message))
+
+df = pd.DataFrame(data, columns=["timestamp", "level", "message"])
+
+# NLP sentiment analysis
+sia = SentimentIntensityAnalyzer()
+df["sentiment"] = df["message"].apply(lambda x: sia.polarity_scores(x)["compound"])
+
+# Flag risky logs
+df["compliance_risk"] = df["sentiment"] < -0.2
+print(df[["timestamp", "level", "message", "compliance_risk"]])
+
+df.to_csv("compliance_report.csv", index=False)
+print("\n✅ Compliance report generated: compliance_report.csv")
+Run the analysis:
+cd ~/elk-nlp-lab
+python3 nlp_compliance.py
+Conclusion
+In this lab, you:
+
+Installed and configured the ELK Stack on your Ubuntu machine
+
+Ingested local system logs and visualized them in Kibana
+
+Applied NLP techniques to extract compliance-relevant insights from log messages
+
+Automatically generated a compliance risk report based on sentiment and pattern analysis
+
+This lab combines observability and AI to streamline compliance reporting — all completely offline.
