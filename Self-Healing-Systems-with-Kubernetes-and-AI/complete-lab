@@ -1,0 +1,121 @@
+Lab 6: Self-Healing Systems with Kubernetes and AI
+Objective
+Deploy a Kubernetes cluster, train an AI model to detect system anomalies, and implement an automated self-healing system that resizes or repairs pods based on AI insights.
+
+Prerequisites
+Ubuntu Machine with Docker installed
+Install Docker:
+sudo apt update
+sudo apt install docker.io -y
+Install Minikube (for local Kubernetes):
+curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
+chmod +x minikube
+sudo mv minikube /usr/local/bin/
+Start Minikube:
+minikube start --driver=docker
+Install Kubectl:
+sudo apt install kubectl -y
+Steps
+Step 1: Deploy Kubernetes Cluster
+Check cluster status:
+kubectl cluster-info
+Deploy a sample app (e.g., Nginx or a custom app):
+kubectl create deployment webapp --image=nginx
+kubectl expose deployment webapp --type=NodePort --port=80
+Scale the deployment:
+kubectl scale deployment webapp --replicas=3
+Check pods and services:
+kubectl get pods
+kubectl get svc
+Step 2: Train an AI Model for Anomaly Detection
+Install ML libraries:
+pip install pandas scikit-learn tensorflow
+Simulate data for AI model (e.g., CPU/Memory usage metrics):
+import pandas as pd
+import numpy as np
+from sklearn.ensemble import IsolationForest
+
+# Simulated system metrics (CPU, Memory usage)
+np.random.seed(42)
+data = {
+    "cpu_usage": np.random.normal(50, 5, 1000),  # Normal CPU usage (50%)
+    "memory_usage": np.random.normal(60, 10, 1000)  # Normal memory usage (60%)
+}
+# Simulate anomalies (outliers)
+data["cpu_usage"][200:250] = np.random.normal(90, 5, 50)  # High CPU usage anomaly
+data["memory_usage"][400:450] = np.random.normal(20, 5, 50)  # Low memory usage anomaly
+
+df = pd.DataFrame(data)
+
+# Train an anomaly detection model (Isolation Forest)
+model = IsolationForest(contamination=0.05)
+model.fit(df)
+
+# Predict anomalies
+df["anomaly"] = model.predict(df)
+df["anomaly"] = df["anomaly"].map({1: 0, -1: 1})  # 1 for anomaly, 0 for normal
+print(df.head())
+Save the trained model:
+import joblib
+joblib.dump(model, 'anomaly_detection_model.pkl')
+Step 3: Integrate AI with Kubernetes for Self-Healing
+Create a Python script to predict anomalies from Kubernetes metrics:
+import kubernetes
+import joblib
+import numpy as np
+from kubernetes import client, config
+from sklearn.preprocessing import StandardScaler
+
+# Load pre-trained anomaly detection model
+model = joblib.load('anomaly_detection_model.pkl')
+
+# Initialize Kubernetes client
+config.load_kube_config()  # If running locally
+v1 = client.CoreV1Api()
+
+# Get pod metrics (simulate using a Python script or use Prometheus)
+# Example: CPU and memory usage for a pod (you can pull real metrics from your Kubernetes setup)
+cpu_usage = np.random.normal(50, 5)  # Replace with actual CPU usage from metrics server
+memory_usage = np.random.normal(60, 10)  # Replace with actual memory usage
+
+# Predict anomaly using the AI model
+data = np.array([[cpu_usage, memory_usage]])
+scaler = StandardScaler()
+data_scaled = scaler.fit_transform(data)
+anomaly = model.predict(data_scaled)
+
+if anomaly == -1:
+    print("Anomaly detected! Triggering self-healing process.")
+    # Self-healing: Automatically rescale or restart pods based on AI insight
+    # Example: Restart pod if anomaly detected
+    pod_name = "webapp-1234"  # Replace with actual pod name
+    v1.delete_namespaced_pod(name=pod_name, namespace="default")
+    print(f"Pod {pod_name} deleted and being rescheduled.")
+Automate healing:
+
+If an anomaly is detected, trigger rescaling or restarting pods:
+kubectl scale deployment webapp --replicas=5  # Rescale to 5 replicas
+Run the Python script to monitor and heal:
+
+python3 monitor_and_heal.py
+Step 4: Monitor and Test
+Monitor system performance:
+Use Kubectl or integrate with Prometheus for live metrics:
+
+kubectl top pods
+kubectl logs <pod-name>
+Verify the AI-based scaling logic:
+Simulate a high load or anomaly to see if the system automatically scales or heals.
+
+Conclusion
+In this lab, you:
+
+Set up a Kubernetes cluster locally using Minikube
+
+Trained an AI model to detect system anomalies (e.g., CPU/Memory spikes)
+
+Integrated AI-based anomaly detection with Kubernetes to trigger self-healing (scaling or restarting pods)
+
+Automated the monitoring and healing process based on real-time AI insights
+
+This lab demonstrates the power of combining AI and Kubernetes for self-healing systems, enabling automation in scaling and fault recovery based on predicted behaviors.
