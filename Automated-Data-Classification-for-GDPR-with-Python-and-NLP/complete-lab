@@ -1,0 +1,152 @@
+Lab 8: Automated Data Classification for GDPR with Python and NLP
+Objective
+Use Python and Natural Language Processing (NLP) techniques to scan datasets, identify personal data, and categorize it for GDPR compliance. This automated classification helps ensure sensitive data (e.g., names, addresses, emails) is handled properly.
+
+Prerequisites
+Ubuntu Machine
+
+Install necessary Python libraries:
+
+pip install pandas spacy nltk sklearn
+Download spaCy English model (used for named entity recognition):
+
+python -m spacy download en_core_web_sm
+Steps
+Step 1: Prepare the Dataset
+Create a dataset with potential personal data (this could be customer records, user input, etc.). For this lab, let's create a CSV file simulating a list of customers with personal information.
+import pandas as pd
+
+data = {
+    "Name": ["John Doe", "Alice Smith", "Bob Johnson", "Emily Davis"],
+    "Email": ["john.doe@example.com", "alice.smith@domain.com", "bob.johnson@work.com", "emily.davis@company.org"],
+    "Phone": ["123-456-7890", "987-654-3210", "555-555-5555", "666-666-6666"],
+    "Address": ["123 Main St", "456 Elm St", "789 Oak St", "101 Pine St"],
+    "Date_of_Birth": ["1990-01-01", "1985-02-10", "1992-03-15", "1989-04-20"],
+}
+
+df = pd.DataFrame(data)
+df.to_csv("personal_data.csv", index=False)
+This will generate a CSV file (personal_data.csv) containing sample personal data.
+Step 2: Load and Preprocess the Data
+Load the dataset for processing:
+import pandas as pd
+
+df = pd.read_csv("personal_data.csv")
+print(df.head())
+Step 3: Apply Named Entity Recognition (NER) to Identify Personal Data
+Use spaCy's Named Entity Recognition (NER) to identify personal information such as names, dates, and emails. These are common identifiers under GDPR.
+import spacy
+
+# Load spaCy's English model
+nlp = spacy.load("en_core_web_sm")
+
+# Function to extract entities from text
+def extract_entities(text):
+    doc = nlp(text)
+    entities = {}
+    for ent in doc.ents:
+        entities[ent.text] = ent.label_
+    return entities
+
+# Apply the function to the columns in the dataframe
+personal_data = {}
+
+for index, row in df.iterrows():
+    name_entities = extract_entities(row["Name"])
+    email_entities = extract_entities(row["Email"])
+    phone_entities = extract_entities(row["Phone"])
+    address_entities = extract_entities(row["Address"])
+
+    personal_data[index] = {
+        "Name_Entities": name_entities,
+        "Email_Entities": email_entities,
+        "Phone_Entities": phone_entities,
+        "Address_Entities": address_entities
+    }
+
+# Display the extracted entities
+for key, value in personal_data.items():
+    print(f"Row {key}:")
+    for field, entities in value.items():
+        print(f"  {field}: {entities}")
+Explanation:
+
+NER helps identify key personal data (e.g., names, emails, phone numbers) by labeling recognized entities.
+
+We apply NER to each field in the dataset (name, email, phone, address).
+
+Step 4: Categorize and Tag Personal Data for GDPR
+Tagging personal data to identify which pieces of information fall under GDPR compliance:
+personal_data_tags = []
+
+for index, row in df.iterrows():
+    data_tags = []
+    name_entities = extract_entities(row["Name"])
+    email_entities = extract_entities(row["Email"])
+    phone_entities = extract_entities(row["Phone"])
+    address_entities = extract_entities(row["Address"])
+    
+    # Tagging logic for GDPR compliance
+    if "PERSON" in [ent for ent in name_entities.values()]:
+        data_tags.append("Name")
+    if "EMAIL" in [ent for ent in email_entities.values()]:
+        data_tags.append("Email")
+    if "PHONE" in [ent for ent in phone_entities.values()]:
+        data_tags.append("Phone")
+    if "ADDRESS" in [ent for ent in address_entities.values()]:
+        data_tags.append("Address")
+    
+    personal_data_tags.append(data_tags)
+
+# Add tags to dataframe
+df["GDPR_Tags"] = personal_data_tags
+
+print(df)
+This will categorize and tag the fields in the dataset that contain GDPR-sensitive information (such as names, emails, and phone numbers).
+Step 5: Generate a Compliance Report
+Generate a report based on tagged data for compliance purposes. Here, you can extract the data and generate a summary for review or further processing:
+compliance_report = []
+
+for index, row in df.iterrows():
+    report = {
+        "Name": row["Name"],
+        "Email": row["Email"],
+        "Phone": row["Phone"],
+        "Address": row["Address"],
+        "GDPR_Tags": ", ".join(row["GDPR_Tags"]),
+    }
+    compliance_report.append(report)
+
+# Save the compliance report to a CSV
+compliance_df = pd.DataFrame(compliance_report)
+compliance_df.to_csv("compliance_report.csv", index=False)
+
+print("Compliance report generated: compliance_report.csv")
+Step 6: Visualize the GDPR Compliance Data
+Visualize the tagged data to understand the distribution of personal data across the dataset. This can help you quickly identify which types of personal data are most frequently stored.
+import matplotlib.pyplot as plt
+
+# Create a count of GDPR Tags
+tag_counts = df["GDPR_Tags"].explode().value_counts()
+
+# Plot the distribution of tags
+tag_counts.plot(kind='bar', color='skyblue')
+plt.title("GDPR Data Distribution")
+plt.xlabel("Data Type")
+plt.ylabel("Frequency")
+plt.xticks(rotation=45)
+plt.show()
+Conclusion
+In this lab, you:
+
+Loaded and processed a sample dataset to simulate real-world personal data (name, email, phone, address).
+
+Used NLP (via spaCy) to extract and classify personal data into GDPR-compliant categories.
+
+Tagged the data according to GDPR regulations, highlighting which fields contain personal or sensitive information.
+
+Generated a compliance report based on the extracted and tagged data.
+
+Visualized the distribution of GDPR-related data in your dataset.
+
+This lab demonstrates how NLP can be used to automatically identify and classify personal data in large datasets, helping ensure GDPR compliance efficiently.
