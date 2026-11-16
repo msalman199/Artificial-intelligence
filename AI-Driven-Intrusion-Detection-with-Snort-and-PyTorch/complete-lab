@@ -1,0 +1,168 @@
+Lab 9: AI-Driven Intrusion Detection with Snort and PyTorch
+Objective
+Set up Snort IDS (Intrusion Detection System) to monitor network traffic, train an AI model with PyTorch to classify past intrusion attempts, and enhance Snort’s detection capabilities using the trained model.
+
+Prerequisites
+Ubuntu Machine
+
+Snort installation
+
+Python with PyTorch for training the AI model.
+
+Step 1: Set up Snort IDS
+1. Install Snort on Ubuntu:
+sudo apt update
+sudo apt install snort -y
+2. Configure Snort:
+Edit Snort configuration file (/etc/snort/snort.conf) to specify network interface and home network.
+sudo nano /etc/snort/snort.conf
+In the configuration file, define the network variables:
+
+ipvar HOME_NET 192.168.1.0/24   # Set your home network
+ipvar EXTERNAL_NET any          # External network
+3. Start Snort for packet capture and intrusion detection:
+sudo snort -A console -c /etc/snort/snort.conf -i eth0
+Replace eth0 with the correct network interface for your machine.
+
+Snort will now monitor network traffic for known intrusion attempts and log them based on predefined rule sets.
+Step 2: Gather Data for AI Model Training
+Collect historical intrusion data:
+If you have network traffic logs or pcap files from previous network traffic, use those. Otherwise, you can simulate network attacks like Port Scans, DDoS, etc.
+
+Export the Snort logs to CSV format (or use the alert file for further analysis). This can be done by parsing Snort's output logs:
+
+cat /var/log/snort/alert | grep "Gen ID" > snort_alerts.txt
+Step 3: Preprocess and Label Data for AI Model
+Prepare the dataset for training the AI model. Here's how to preprocess the logs:
+
+Parse and extract features from Snort logs like IP addresses, ports, and alert types.
+
+Label the logs as intrusion or normal based on the alert type or attack signature.
+
+Example script to process Snort logs and create features for machine learning:
+
+import pandas as pd
+import numpy as np
+from sklearn.preprocessing import LabelEncoder
+
+# Load Snort alert data (replace with your own log file)
+data = []
+with open('snort_alerts.txt', 'r') as file:
+    for line in file:
+        # Extract relevant fields (example: IP addresses, ports, alert type)
+        parts = line.split()
+        src_ip = parts[1]
+        dst_ip = parts[3]
+        alert_type = parts[-1]  # last part is alert type
+
+        data.append([src_ip, dst_ip, alert_type])
+
+# Create DataFrame
+df = pd.DataFrame(data, columns=["src_ip", "dst_ip", "alert_type"])
+
+# Encode alert type (0: normal, 1: intrusion)
+le = LabelEncoder()
+df["alert_label"] = le.fit_transform(df["alert_type"])
+
+# Feature extraction (e.g., length of src_ip, dst_ip)
+df["src_ip_len"] = df["src_ip"].apply(lambda x: len(x))
+df["dst_ip_len"] = df["dst_ip"].apply(lambda x: len(x))
+
+# Example: create more features based on the logs
+# df["some_feature"] = some_feature_extraction_function(df)
+
+print(df.head())
+Step 4: Train a PyTorch Model to Classify Intrusions
+Install PyTorch:
+pip install torch torchvision
+Create a PyTorch model to classify intrusions based on the processed data:
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import DataLoader, TensorDataset
+
+# Define a simple neural network model
+class IntrusionDetectionModel(nn.Module):
+    def __init__(self):
+        super(IntrusionDetectionModel, self).__init__()
+        self.fc1 = nn.Linear(4, 64)  # 4 features as input
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 2)  # Output layer (binary classification)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        x = self.fc3(x)
+        return x
+
+# Prepare data for PyTorch model
+X = df[["src_ip_len", "dst_ip_len"]].values  # Example features
+y = df["alert_label"].values  # Labels (0: normal, 1: intrusion)
+
+# Convert to PyTorch tensors
+X_tensor = torch.tensor(X, dtype=torch.float32)
+y_tensor = torch.tensor(y, dtype=torch.long)
+
+# Create DataLoader for batching
+dataset = TensorDataset(X_tensor, y_tensor)
+dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+
+# Initialize model, loss function, and optimizer
+model = IntrusionDetectionModel()
+criterion = nn.CrossEntropyLoss()
+optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+# Train the model
+num_epochs = 10
+for epoch in range(num_epochs):
+    for inputs, labels in dataloader:
+        # Forward pass
+        outputs = model(inputs)
+        loss = criterion(outputs, labels)
+
+        # Backward pass and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+    print(f"Epoch {epoch+1}/{num_epochs}, Loss: {loss.item()}")
+Step 5: Integrate AI Model with Snort for Self-Healing
+Predict anomalies in real-time:
+
+Use the trained model to predict incoming traffic and classify it as either normal or intrusive.
+
+If an intrusion is predicted, Snort could trigger self-healing actions, such as blocking IP addresses or initiating network segmentation.
+
+Example script for real-time intrusion prediction:
+
+# Simulate real-time prediction from Snort data
+new_data = torch.tensor([[16, 15]], dtype=torch.float32)  # Example: incoming traffic features
+
+# Predict using the trained model
+model.eval()
+with torch.no_grad():
+    prediction = model(new_data)
+
+# Check if prediction indicates an intrusion
+predicted_label = prediction.argmax(dim=1).item()
+if predicted_label == 1:
+    print("Intrusion detected! Triggering response.")
+    # Example: Block the offending IP or rescale the system
+    # Trigger firewall rule update or restart a service, etc.
+Step 6: Monitor and Update Rules Based on AI Predictions
+Once the AI model is trained and integrated with Snort, regularly update the firewall and intrusion detection rules based on AI predictions.
+
+Continuously feed real-time data into the AI model for ongoing classification and potential self-healing actions.
+
+Conclusion
+In this lab, you:
+
+Set up Snort IDS to monitor network traffic for intrusions.
+
+Preprocessed historical intrusion logs to train an AI model using PyTorch.
+
+Trained a model to classify traffic as normal or intrusive.
+
+Integrated the trained model with Snort for real-time intrusion detection and self-healing actions based on AI insights.
+
+This lab demonstrates how AI can enhance intrusion detection systems by automating the detection and response to network threats.
