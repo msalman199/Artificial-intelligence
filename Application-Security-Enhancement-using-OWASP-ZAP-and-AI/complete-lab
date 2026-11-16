@@ -1,0 +1,143 @@
+Lab 10: Application Security Enhancement using OWASP ZAP and AI
+Objective
+Use OWASP ZAP to perform application penetration testing and integrate AI to enhance vulnerability prediction and automate security testing improvements.
+
+Prerequisites
+Ubuntu Machine
+
+Install OWASP ZAP and Python AI libraries:
+
+sudo apt update
+sudo apt install zaproxy -y
+pip install scikit-learn pandas matplotlib tensorflow
+Steps
+Step 1: Install and Set Up OWASP ZAP for Penetration Testing
+Start OWASP ZAP:
+Run OWASP ZAP in GUI or headless mode. For headless mode:
+
+zap.sh -daemon
+Configure OWASP ZAP:
+
+Configure OWASP ZAP to use its API for programmatic access and automate penetration testing.
+
+In GUI, go to Tools → Options → API, and make sure API access is enabled.
+
+Basic Penetration Test:
+
+Use ZAP's automated scanner to run a basic test against your web application.
+
+Example using curl to interact with ZAP’s API:
+
+curl -X GET "http://localhost:8080/JSON/ascan/action/scan?url=http://your-web-app.com"
+ZAP will return a scan ID, which you can use to track the status of the scan.
+Review Results:
+The results will indicate potential vulnerabilities such as SQL injection, Cross-Site Scripting (XSS), and broken authentication.
+
+Step 2: Extract Vulnerabilities and Prepare Data for AI Model
+Extract Results:
+Once the penetration test completes, you can export the results (in JSON or XML format) using ZAP's API.
+
+Example API call to export results:
+
+curl -X GET "http://localhost:8080/JSON/core/action/alerts?baseurl=http://your-web-app.com&count=10&start=0"
+This will return a list of alerts/vulnerabilities detected by ZAP.
+
+Create a Dataset for AI Model:
+Preprocess the exported ZAP results into a CSV or structured format suitable for training an AI model. You can create features based on:
+
+Vulnerability type (e.g., SQL Injection, XSS)
+
+Severity (e.g., Low, Medium, High)
+
+URL affected
+
+Other metadata such as frequency of occurrence and previous fixes.
+
+Example code to preprocess:
+
+import pandas as pd
+
+# Simulating data extraction from OWASP ZAP results
+data = {
+    "vulnerability_type": ["SQL Injection", "XSS", "SQL Injection", "Broken Auth", "XSS"],
+    "severity": ["High", "Medium", "High", "Low", "Medium"],
+    "affected_url": ["http://example.com/page1", "http://example.com/page2", "http://example.com/page1", "http://example.com/page3", "http://example.com/page2"],
+    "occurrences": [10, 5, 8, 1, 6]
+}
+
+df = pd.DataFrame(data)
+df["severity_encoded"] = df["severity"].map({"Low": 0, "Medium": 1, "High": 2})
+df.to_csv("zap_vulnerabilities.csv", index=False)
+print(df.head())
+This creates a CSV file containing structured data based on vulnerabilities identified during penetration testing.
+
+Step 3: Train an AI Model for Vulnerability Prediction
+Load and Train the Model:
+We'll use a Random Forest model from Scikit-learn to predict vulnerability severity based on the extracted features.
+
+Example code for training:
+
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+
+# Load dataset
+df = pd.read_csv("zap_vulnerabilities.csv")
+
+# Features and target variable
+X = df[["occurrences"]]  # We use "occurrences" as the feature
+y = df["severity_encoded"]  # The target is severity
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Initialize and train the RandomForest model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Evaluate the model
+y_pred = model.predict(X_test)
+print(classification_report(y_test, y_pred))
+Evaluate Model:
+After training, the model will predict the severity of vulnerabilities based on their characteristics. You can evaluate the model’s performance with metrics like accuracy and classification report.
+
+Step 4: Integrate AI Predictions with OWASP ZAP
+AI-Enhanced Vulnerability Management:
+Use the trained AI model to predict the severity of newly detected vulnerabilities. Based on these predictions, automatically adjust or recommend firewall rules, patch priorities, or remediation strategies.
+
+Example code to apply AI model for new vulnerabilities:
+
+new_vulnerabilities = pd.DataFrame({
+    "vulnerability_type": ["Cross-Site Request Forgery", "Broken Authentication"],
+    "occurrences": [4, 3]
+})
+
+# Predict the severity using the trained AI model
+new_vulnerabilities["predicted_severity"] = model.predict(new_vulnerabilities[["occurrences"]])
+
+print(new_vulnerabilities)
+This would classify the severity of new vulnerabilities based on the trained model and help prioritize remediation efforts.
+
+Step 5: Automate Remediation and Optimizations
+Automatic Remediation:
+Based on AI predictions, automate the remediation process in response to vulnerabilities detected by ZAP. For example:
+
+If the predicted severity is High, trigger an alert or automatic patching process.
+
+If the severity is Low, recommend a lower priority for remediation.
+
+Extend with Snort or Firewall:
+Integrate Snort or a firewall with the AI predictions to automatically block or rate-limit traffic associated with high-severity vulnerabilities.
+
+Conclusion
+In this lab, you:
+
+Set up OWASP ZAP for penetration testing and vulnerability scanning.
+
+Extracted and structured ZAP results into a dataset.
+
+Trained an AI model using Scikit-learn to predict vulnerability severity.
+
+Integrated the trained model with OWASP ZAP for automated vulnerability classification and enhanced remediation strategies.
+
+This lab demonstrates how AI-driven techniques can enhance traditional penetration testing and vulnerability management by prioritizing and automating responses to security threats.
